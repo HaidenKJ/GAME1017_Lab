@@ -1,112 +1,88 @@
-using System.Collections.Generic;
 using UnityEngine;
 using System.IO;
 using TMPro;
 
+[System.Serializable] // For JSON.
+public class GameData
+{
+    public int BS; // Bottle score
+    public Vector3 spawnPosition;
+    public Vector3 Startspawn { get; private set; } // Now it's a property!
+
+    public GameData()
+    {
+        BS = 0;
+        Startspawn = new Vector3(-0.109f, 1.5f, -8.575f); // Starting position of controller object 
+        spawnPosition = Startspawn; 
+    }
+}
 public class SaveManager : MonoBehaviour
 {
-    [System.Serializable]
-    public class GameData
-    {
-        public int bottlesHit;
-        public Vector3 spawnPosition;
-        public GameData()
-        {
-            bottlesHit = 0;
-            spawnPosition = new Vector3(-0.109f, 1.5f, -8.575f);
-        }
-    }
-
     [SerializeField] private TMP_Text hitValue;
-    public static SaveManager Instance { get; private set; } // Static object of the class.
+    public static SaveManager instance { get; private set; }
+    // Space for instance
     public GameData gameData;
     private string filePath;
 
-
-
-    private void Awake() // Ensure there is only one instance of SoundManager.
+    private void Awake()
     {
-        if (Instance == null) // If the object/instance doesn't exist yet.
+        if (instance == null)
         {
-            Instance = this;
-            DontDestroyOnLoad(gameObject); // SoundManager will persist between scenes.
+            instance = this;
+            DontDestroyOnLoad(gameObject); // Optional becaus eonly one scene.
             Initialize();
         }
         else
         {
-            Destroy(gameObject); // Destroy duplicate instances
+            Destroy(gameObject);
         }
     }
-
-    // Initialize the SoundManager. I just put this functionality here instead of in the static constructor.
     private void Initialize()
     {
-        gameData = new GameData();
+        gameData = new GameData();// Create the object of GameData
         LoadGameData();
     }
 
     private void LoadGameData()
     {
-        // Define the file path for the JSON file. Path.Combine is preferred over concatenation (+).
         filePath = Path.Combine(Application.persistentDataPath, "GameData.json");
-        Debug.Log(filePath);
-
-        // Check if the file exists.
         if (File.Exists(filePath))
         {
-            // Read the JSON data from the file.
             string jsonData = File.ReadAllText(filePath);
-
-            // Deserialize the JSON data into our data class.
             gameData = JsonUtility.FromJson<GameData>(jsonData);
-
-            // Update the highscore value right from the game data.
-            hitValue.text = gameData.bottlesHit.ToString();
+            hitValue.text = gameData.BS.ToString();
         }
         else
-        {
-            Debug.Log("No high score data to load.");
-        }
+            Debug.Log("No high score data found");
     }
-
     private void SaveGameData()
     {
-        // Serialize the data to JSON format.
         string jsonData = JsonUtility.ToJson(gameData);
-
-        // Write the JSON data to the file.
         File.WriteAllText(filePath, jsonData);
     }
-
-    public void UpdateScore()
+    public void ClearGameData() // Public cuz its a button function
     {
-        gameData.bottlesHit++; ;
-        hitValue.text = gameData.bottlesHit.ToString();
-    }
-
-    public void UpdateSpawnPoint(Vector3 newSpawn)
-    {
-        gameData.spawnPosition = newSpawn;
-    }
-
-    public void ClearGameData()
-    {
-        gameData.bottlesHit = 0;
-        hitValue.text = gameData.bottlesHit.ToString();
-        gameData.spawnPosition = new Vector3(-0.109f, 1.5f, -8.575f);
+        gameData.BS = 0;
+        hitValue.text = "0";
+        gameData.spawnPosition = gameData.Startspawn;
         if (File.Exists(filePath))
         {
-            // Delete the JSON file.
             File.Delete(filePath);
-            Debug.Log("Game data cleared successfully.");
+            Debug.Log("Game data succesfully cleared");
         }
         else
-        {
-            Debug.Log("No game data to clear.");
-        }
+            Debug.Log("No game data to clear!");
     }
-
-    void OnApplicationQuit()
+    public void UpdateScore()
+    {
+        gameData.BS++; // Or you can give as many points as you like
+        hitValue.text = gameData.BS.ToString();
+    }
+    public void UpdateSpawnPoint(Vector3 newSpawn)
+    {
+        gameData.spawnPosition = newSpawn; // Set spawn to a new checkpoint
+    }
+    public void OnApplicationQuit() // Automatically run when the game quits
     {
         SaveGameData();
     }
