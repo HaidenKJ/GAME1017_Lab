@@ -8,9 +8,16 @@ public class VolumeControl : MonoBehaviour
     [SerializeField] private Slider musicVolumeSlider;
     [SerializeField] private Slider masterVolumeSlider;
     [SerializeField] private Slider stereoPanningSlider; // New slider for stereo panning
+    
 
     private void Start()
     {
+        if (stereoPanningSlider != null)
+        {
+            stereoPanningSlider.value = SoundManager.GetStereoPanning();
+            stereoPanningSlider.onValueChanged.AddListener(SetStereoPanning);
+        }
+
         // Initialize sliders with current volume levels
         if (sfxVolumeSlider != null)
         {
@@ -29,12 +36,6 @@ public class VolumeControl : MonoBehaviour
             masterVolumeSlider.value = AudioListener.volume;
             masterVolumeSlider.onValueChanged.AddListener(OnMasterVolumeChanged);
         }
-
-        if (stereoPanningSlider != null)
-        {
-            stereoPanningSlider.value = 0f; // Default stereo panning in the center
-            stereoPanningSlider.onValueChanged.AddListener(OnStereoPanningChanged);
-        }
     }
 
     public void OnSFXVolumeChanged(float value)
@@ -52,8 +53,9 @@ public class VolumeControl : MonoBehaviour
         AudioListener.volume = value;
     }
 
-    public void OnStereoPanningChanged(float value)
+    public void SetStereoPanning(float value)
     {
-        SoundManager.SetStereoPanning(value); // Adjust stereo panning using the slider's value
+        SoundManager.SetStereoPanning(value);
     }
+
 }
