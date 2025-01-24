@@ -18,7 +18,6 @@ public static class SoundManager
     private static AudioSource sfxSource;
     // Create AudioSource for music.
     private static AudioSource musicSource;
-
     static SoundManager() // Static constructor. Gets called the first time the class is accessed.
     {
         Initialize();
@@ -146,6 +145,11 @@ public static class SoundManager
         sfxSource.panStereo = panning;
         musicSource.panStereo = panning;
     }
+
+    public static float GetStereoPanning()
+    {
+        return sfxSource.panStereo; // Same for both music and SFX
+    }
     public static float GetSFXVolume()
     {
         return sfxSource.volume;
@@ -155,9 +159,4 @@ public static class SoundManager
     {
         return musicSource.volume;
     }
-    public static float GetStereoPanning()
-    {
-    return sfxSource.panStereo; // Same for both music and SFX
-    }
-
 }
