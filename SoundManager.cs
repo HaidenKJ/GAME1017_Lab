@@ -1,126 +1,122 @@
-using System.Collections;
 using System.Collections.Generic;
-using UnityEditor.SceneManagement;
 using UnityEngine;
 
-public enum SoundType
+public class SoundManager : MonoBehaviour
 {
-    SOUND_SFX,
-    SOUND_MUSIC
-}
-
-// This SoundManager is a GameObject in Memory, it is not an actual simulated object (I mean its not physical)
-public static class SoundManager // This is a static class. Every member should be static.
-{
-
-    // Create Dictionaries
-    private static Dictionary<string, AudioClip> sfxDictionary;
-    private static Dictionary<string, AudioClip> musicDictionary;
-    // Create AudioSources. A GameObject in the scene is needed for theese.
-    private static AudioSource sfxSource;
-    private static AudioSource musicSource;
-
-    static SoundManager() // Static Constructor. Called the first time the class is accessed.
+    public enum SoundType
     {
-        initialize();
+        SOUND_SFX,
+        SOUND_MUSIC
     }
 
-    private static void initialize()
+    public static SoundManager Instance { get; private set; } // Static object of the class.
+
+    private Dictionary<string, AudioClip> sfxDictionary = new Dictionary<string, AudioClip>();
+    private Dictionary<string, AudioClip> musicDictionary = new Dictionary<string, AudioClip>();
+    private AudioSource sfxSource;
+    private AudioSource musicSource;
+
+    private void Awake() // Ensure there is only one instance of SoundManager.
     {
-        // Initialize the Dictionaries
-        sfxDictionary = new Dictionary<string, AudioClip>();
-        musicDictionary = new Dictionary<string, AudioClip>();
-        // Create a new GameObject to hold the AudioSources.
-        GameObject SoundManagerObject = new GameObject("SoundManager");
-        
-        sfxSource = SoundManagerObject.AddComponent<AudioSource>();
-        musicSource = SoundManagerObject.AddComponent<AudioSource>();
-        sfxSource.volume = 0.75f; // 0.0f - 1.0f for volume, think of it as out of 100%
-        musicSource.volume = 0.25f;
-        musicSource.loop = true; // Loops our music track
-
-    }
-
-
-    //public static void SetTargetsBytType()
-    //{
-
-    //}
-    //public static Dictionary<string, AudioClip> GetDictionaryByType()
-    //{
-    //    return null;
-    //}
-
-
-
-
-    // Define our public interface for the manager.
-    public static void AddSound(string soundkey, AudioClip audioClip, SoundType soundType)
-    {
-        if(audioClip == null)
+        if (Instance == null) // If the object/instance doesn't exist yet.
         {
-            Debug.LogError("Error Loading AudioClip");
-            return;
+            Instance = this;
+            DontDestroyOnLoad(gameObject); // SoundManager will persist between scenes.
+            Initialize();
         }
+        else
+        {
+            Destroy(gameObject); // Destroy duplicate instances
+        }
+    }
+
+    // Initialize the SoundManager. I just put this functionality here instead of in the static constructor.
+    private void Initialize()
+    {
+        sfxSource = gameObject.AddComponent<AudioSource>();
+        sfxSource.volume = 1.0f;
+        
+        musicSource = gameObject.AddComponent<AudioSource>();
+        musicSource.volume = 0.25f;
+        musicSource.loop = true;
+    }
+
+    // Add a sound to the dictionary.
+    public void AddSound(string soundKey, AudioClip audioClip, SoundType soundType)
+    {
+        Dictionary<string, AudioClip> targetDictionary = GetDictionaryByType(soundType);
+
+        if (!targetDictionary.ContainsKey(soundKey))
+        {
+            targetDictionary.Add(soundKey, audioClip);
+        }
+        else
+        {
+            Debug.LogWarning("Sound key " + soundKey + " already exists in the " + soundType + " dictionary.");
+        }
+    }
+
+    // Play a sound by key interface.
+    public void PlaySound(string soundKey)
+    {
+        Play(soundKey, SoundType.SOUND_SFX);
+    }
+
+    // Play music by key interface.
+    public void PlayMusic(string soundKey)
+    {
+        musicSource.Stop();
+        Play(soundKey, SoundType.SOUND_MUSIC);
+    }
+
+    // Play utility.
+    private void Play(string soundKey, SoundType soundType)
+    {
+        Dictionary<string, AudioClip> targetDictionary;
+        AudioSource targetSource;
+
+        SetTargetsByType(soundType, out targetDictionary, out targetSource);
+
+        if (targetDictionary.ContainsKey(soundKey))
+        {
+            targetSource.PlayOneShot(targetDictionary[soundKey]);
+        }
+        else
+        {
+            Debug.LogWarning("Sound key " + soundKey + " not found in the " + soundType + " dictionary.");
+        }
+    }
+
+    private void SetTargetsByType(SoundType soundType, out Dictionary<string, AudioClip> targetDictionary, out AudioSource targetSource)
+    {
         switch (soundType)
         {
             case SoundType.SOUND_SFX:
-                if (!sfxDictionary.ContainsKey(soundkey))
-                {
-                    sfxDictionary.Add(soundkey, audioClip);
-                }
-                else
-                {
-                    Debug.LogError($"Key {soundkey} already in dictionary");
-                }
-                    break;
+                targetDictionary = sfxDictionary;
+                targetSource = sfxSource;
+                break;
             case SoundType.SOUND_MUSIC:
-                if (!musicDictionary.ContainsKey(soundkey))
-                {
-                    musicDictionary.Add(soundkey, audioClip);
-                }
-                else
-                {
-                    Debug.LogError($"Key {soundkey} already in dictionary");
-                }
-                    break;
-            
+                targetDictionary = musicDictionary;
+                targetSource = musicSource;
+                break;
             default:
-                Debug.LogError("Unsupported SoundType!");
+                Debug.LogError("Unknown sound type: " + soundType);
+                targetDictionary = null;
+                targetSource = null;
                 break;
         }
-
     }
-    public static void PlaySound(string soundKey)
+    private Dictionary<string, AudioClip> GetDictionaryByType(SoundType soundType)
     {
-        if (sfxDictionary.ContainsKey(soundKey))
+        switch (soundType)
         {
-            sfxSource.PlayOneShot(sfxDictionary[soundKey]);
-            // PlayOneShot Allows SFX to be layered over each other using the same source. 
-        }
-        else
-        {
-            Debug.LogError($"Error {soundKey} not found!");
-        }
-    }
-    public static void PlayMusic(string soundKey)
-    {
-        if (musicDictionary.ContainsKey(soundKey))
-        {
-            musicSource.Stop();
-            musicSource.clip = musicDictionary[soundKey]; // Loading music clip into the source
-            musicSource.Play(); 
-            // This means you can only play one instance of music at time, so no layering like PlayOneShot.
-        }
-        else
-        {
-            Debug.LogError($"Error {soundKey} not found!");
+            case SoundType.SOUND_SFX:
+                return sfxDictionary;
+            case SoundType.SOUND_MUSIC:
+                return musicDictionary;
+            default:
+                Debug.LogError("Unknown sound type: " + soundType);
+                return null;
         }
     }
-    public static void Play()
-    {
-       // DO THIS NEXT WEEK
-    }
-
-
 }
